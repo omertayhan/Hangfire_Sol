@@ -1,3 +1,6 @@
+using Hangfire;
+using HangfireBasicAuthenticationFilter;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -6,6 +9,12 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHangfire((sp, config) =>
+{
+    var connString = sp.GetRequiredService<IConfiguration>().GetConnectionString("DbConnection");
+    config.UseSqlServerStorage(connString);
+});
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
@@ -21,5 +30,20 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseHangfireDashboard("/dashboard", new DashboardOptions
+{
+    DashboardTitle = "Hangfire Sample",
+    DarkModeEnabled = true,
+    DisplayStorageConnectionString = false,
+    Authorization = new List<HangfireCustomBasicAuthenticationFilter>
+    {
+        new HangfireCustomBasicAuthenticationFilter
+        {
+            User = "hangfire",
+            Pass = "hangfire123"
+        }
+    }
+});
 
 app.Run();
